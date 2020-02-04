@@ -1,0 +1,24 @@
+{
+  "name": "manage-employees",
+  "version": "1.0.0",
+  "description": "",
+  "main": "manage.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moullier/manage-employees.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/moullier/manage-employees/issues"
+  },
+  "homepage": "https://github.com/moullier/manage-employees#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^7.0.4",
+    "mysql": "^2.18.1"
+  }
+}
