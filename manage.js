@@ -68,7 +68,7 @@ function printEmployeesByManager() {
 	            e.role_id = r.id
             LEFT JOIN department d ON
 	            r.department_id = d.id
-            ORDER BY Manager;`;
+            WHERE m.first_name = 'Royce' AND m.last_name = 'McGill';`;
     
     connection.query(q, function(err, res) {
         if (err) throw err;
@@ -82,46 +82,131 @@ function printEmployeesByManager() {
 function addEmployee() {
     let availableRoles = [];
 
-    let q = "SELECT title FROM roles;";
+    let q = "SELECT title, id FROM roles ORDER BY id;";
     connection.query(q, function(err, res) {
         if (err) throw err;
-    
-        availableRoles = responseToArray(res);
-        console.log(availableRoles);
-        console.table(res);
+  
+        console.log("***" + res);
+        let roleList = res.map(el => el.title);
+        console.log(roleList);
 
-        inquirer.prompt([
-            {
-                type: "input",
-                message: "What is the employee's first name?",
-                name: "f_name"
-            },
-            {
-                type: "input",
-                message: "What is the employee's last name?",
-                name: "l_name"
-            },
-            {
-                type: "list",
-                message: "What is the employee's role?",
-                choices: availableRoles,
-                name: "role"
-            },
-            {
-                type: "input",
-                message: "What is the employee's ID?",
-                name: "id"
+        // make list of roles to use in inquirer
+/*        for(let i = 0; i < res.length; i++) {
+            console.log(res[i].title);
+            availableRoles.push(res[i].title)
+        }
+*/
+
+/*      let managerQuery = `SELECT DISTINCT e.manager_id, m.first_name, m.last_name 
+        FROM employee e
+        LEFT JOIN employee m
+        ON (e.manager_id IS NOT NULL) AND (e.manager_id = m.id);`;
+*/
+
+        let managerQuery = `SELECT first_name, last_name, id FROM employee;`;
+        connection.query(managerQuery, function(err, managerRes) {
+            if (err) throw err;
+
+            let managerArray = managerRes.map(el => el.first_name + " " + el.last_name);
+            console.log(managerArray);
+
+/*            for(let j = 0; j < managerRes.length; j++) {
+                console.log(managerRes[j].Name);
+                if(managerRes[j].Name != null) {
+                    // let str = managerRes[j].first_name.concat(" " + managerRes[j].last_name);
+                    managerArray.push(managerRes[j].Name);
+                }
+                
             }
-        ])
-        .then(function (response) {
+            */
+
+            managerArray.push("No Manager Assigned");
+            console.log("MANAGER ARRAY = " + managerArray);
+            console.log("MANAGER ARRAY[0] = " + managerArray[0]);
+
+//            console.log(availableRoles);
+//            console.table(res);
     
+            inquirer.prompt([
+                {
+                    type: "input",
+                    message: "What is the employee's first name?",
+                    name: "f_name"
+                },
+                {
+                    type: "input",
+                    message: "What is the employee's last name?",
+                    name: "l_name"
+                },
+                {
+                    type: "list",
+                    message: "What is the employee's role?",
+                    choices: roleList,
+                    name: "role"
+                },
+                {
+                    type: "list",
+                    message: "Who is the employee's manager",
+                    choices: managerArray,
+                    name: "emp_manager"
+                }
+            ])
+            .then(function (response) {
+
+                // use selected role title to get id for role
+                let newRoleID = res.filter(function(obj) {
+                    if(obj.title == response.role) {
+                        return obj;
+                    }
+                });
+
+                newRoleID = newRoleID[0].id;
+
+                // get manager ID if a manager was selected for the new employee
+                let newManagerID;
+                
+                console.log("response.emp_manager = " + response.emp_manager);
+
+                if(response.emp_manager == "No Manager Assigned") {
+                    newManagerID = -1;
+                } else {
+                    newManagerID = managerRes.filter(function(obj) {
+                        console.log(obj);
+                        let manName = obj.first_name + " " + obj.last_name;
+                        console.log("manName = " + manName);
+                        if(manName == response.emp_manager) {
+                            return obj;
+                        }
+                    });
+                    newManagerID = newManagerID[0].id;
+                }
+
+                console.log("newManagerID = " + newManagerID);
+
+
+                let insertEEQuery;
+                if(newManagerID == -1){
+                    insertEEQuery = `INSERT INTO employee (first_name, last_name, role_id)
+                    values ('${response.f_name}', '${response.l_name}', ${newRoleID});`;
+                } else {
+                    insertEEQuery= `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                    values ('${response.f_name}', '${response.l_name}', ${newRoleID}, ${newManagerID});`;
+                }
+
+                connection.query(insertEEQuery, function(err, newEERes) {
+                    if (err) throw err;
+
+                    repeat();
+                });                
+
+            });
         });
     });
 }
 
 // this converts a response from a mySQL query to an array of Strings
 function responseToArray() {
-    
+
 
 
 }
