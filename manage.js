@@ -21,17 +21,18 @@ const connection = mysql.createConnection({
     database: "employee_db"
   });
 
-  connection.connect(function(err) {
+connection.connect(function(err) {
     if (err) throw err;
     console.log("connected as id " + connection.threadId + "\n");
     
-//    printEmployeeInfo();
     mainLoop("View All Employees");
 
-  });
+});
 
-  function printEmployeeInfo() {
-    let q = `SELECT e.id, e.first_name, e.last_name,
+
+// print a list of all employees with employee info plus Role Title, Department and Manager
+function printEmployeeInfo() {
+    let empQuery = `SELECT e.id, e.first_name, e.last_name,
 	        r.title AS 'Title', r.salary,
             d.name AS 'Department', 
             IFNULL(CONCAT(m.first_name, ' ', m.last_name), NULL) AS 'Manager'
@@ -43,16 +44,15 @@ const connection = mysql.createConnection({
 	            e.role_id = r.id
             LEFT JOIN department d ON
 	            r.department_id = d.id;`;
-    connection.query(q, function(err, res) {
+    connection.query(empQuery, function(err, res) {
         if (err) throw err;
-        // Log all results of the SELECT statement
-        //console.log(res);
     
         console.table(res);
         repeat();
     });   
 }
 
+// print all employees sorted by which Manager they have
 function printEmployeesByManager() {
     console.log("Print EEs by Manager");
 
@@ -83,29 +83,27 @@ function printEmployeesByManager() {
 // inserts a new Employee into the employee table of the database
 function addEmployee() {
 
+    // get a list of all roles with ids
     let q = "SELECT title, id FROM roles ORDER BY id;";
     connection.query(q, function(err, res) {
         if (err) throw err;
   
-        console.log("***" + res);
+        // create a list of only the role titles as strings to use with inquirer
         let roleList = res.map(el => el.title);
-        console.log(roleList);
+        //console.log(roleList);
 
+        // get list of all other employees with ids in order to select the new employee's manager
         let managerQuery = `SELECT first_name, last_name, id FROM employee;`;
         connection.query(managerQuery, function(err, managerRes) {
             if (err) throw err;
 
+            // map the response to an array of only manager name strings for use in inquirer
             let managerArray = managerRes.map(el => el.first_name + " " + el.last_name);
-            console.log(managerArray);
 
-
+            // add the option for assigning no manager to the new employee
             managerArray.push("No Manager Assigned");
-            console.log("MANAGER ARRAY = " + managerArray);
-            console.log("MANAGER ARRAY[0] = " + managerArray[0]);
-
-//            console.log(availableRoles);
-//            console.table(res);
     
+            // prompt user for information about the new employee
             inquirer.prompt([
                 {
                     type: "input",
@@ -143,24 +141,19 @@ function addEmployee() {
 
                 // get manager ID if a manager was selected for the new employee
                 let newManagerID;
-                
-                console.log("response.emp_manager = " + response.emp_manager);
 
+                // set id to -1 if no manager selected
                 if(response.emp_manager == "No Manager Assigned") {
                     newManagerID = -1;
                 } else {
                     newManagerID = managerRes.filter(function(obj) {
-                        console.log(obj);
                         let manName = obj.first_name + " " + obj.last_name;
-                        console.log("manName = " + manName);
                         if(manName == response.emp_manager) {
                             return obj;
                         }
                     });
                     newManagerID = newManagerID[0].id;
                 }
-
-                console.log("newManagerID = " + newManagerID);
 
                 // create INSERT query depending on whether the new employee has been assigned a manager or not
                 let insertEEQuery;
@@ -219,9 +212,8 @@ function addRole() {
     connection.query(viewDepartmentsQuery, function(err, res) {
         if (err) throw err;
 
-        console.log(res);
         let deptList = res.map(el => el.name);
-        console.log(deptList);
+        // console.log(deptList);
  
         inquirer.prompt([
             {
@@ -252,7 +244,7 @@ function addRole() {
     
             deptID = deptID[0].id;
     
-            console.log(`deptID is ${deptID}`);
+            // console.log(`deptID is ${deptID}`);
     
     
             // create INSERT query for the department
@@ -269,7 +261,7 @@ function addRole() {
     });
 }
 
-
+// prints a list of all departments with ids
 function viewDepartments() {
 
     let viewDepartmentsQuery = `SELECT id, name AS 'Department Name' FROM department;`;
@@ -283,6 +275,9 @@ function viewDepartments() {
 
 }
 
+
+// prints a list of all roles with id, title, salary and department name
+// requires a JOIN of roles table to department table
 function viewRoles() {
 
     let viewRolesQuery = `SELECT r.id as id, r.title as Title,
@@ -307,17 +302,18 @@ function updateEmployeeRole() {
     connection.query(empQuery, function(err, empRes) {
         if (err) throw err;
 
+        // map to an array of only employee names for use in inquirer prompt
         let empArray = empRes.map(el => el.first_name + " " + el.last_name);
-        console.log(empArray);
         
+        // get list of all roles so that user can select new role for employee
         let roleQuery = "SELECT title, id FROM roles ORDER BY id;";
         connection.query(roleQuery, function(err, res) {
             if (err) throw err;
     
-            console.log("***" + res);
+            // map a lists of all roles for use in inquirer
             let roleList = res.map(el => el.title);
-            console.log(roleList);
 
+            // prompt user for information about employee getting new role
             inquirer.prompt([
                 {
                     type: "list",
@@ -333,8 +329,6 @@ function updateEmployeeRole() {
                 }
             ])
             .then(function (response) {
-                console.log("The new role is " + response.role);
-
                 // use selected role title to get id for role
                 let newRoleID = res.filter(function(obj) {
                     if(obj.title == response.role) {
@@ -343,27 +337,27 @@ function updateEmployeeRole() {
                 });
 
                 newRoleID = newRoleID[0].id;
-                console.log("The new role ID is " + newRoleID);
+                // console.log("The new role ID is " + newRoleID);
 
+                // get ID of employee to update from their name
                 let newEmpID = empRes.filter(function(obj) {
-                    console.log(obj);
                     let empName = obj.first_name + " " + obj.last_name;
-                    console.log("empName = " + empName);
+            
                     if(empName == response.emp) {
                         return obj;
                     }
                 });
 
                 newEmpID = newEmpID[0].id;
-                console.log("newEmpID = " + newEmpID);
+                // console.log("newEmpID = " + newEmpID);
 
-
+                // create UPDATE query
                 let updateQuery = `UPDATE employee SET role_id = ${newRoleID} WHERE id = ${newEmpID};`;
                 
                 connection.query(updateQuery, function(err, updateRes) {
                     if (err) throw err;
 
-                    console.log(`Role updated for ${response.emp}`);
+                console.log(`Role updated for ${response.emp}`);
                 repeat();
                 });
             });
@@ -371,9 +365,68 @@ function updateEmployeeRole() {
     });
 }
 
+// calculates total employee salary for a specified department
+function viewDeptBudget() {
+
+    // get list of all existing departments
+    let viewDepartmentsQuery = `SELECT id, name FROM department;`;
+    connection.query(viewDepartmentsQuery, function(err, res) {
+        if (err) throw err;
+
+        // create array of only departments from result of query
+        let deptList = res.map(el => el.name);
+
+        // prompt user for desired department using the list
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Which department's budget do you want to see?",
+                choices: deptList,
+                name: "dept"
+            }
+        ])
+        .then(function (response){
+            // get department id from department selected
+            let deptID = res.filter(function(obj) {
+                if(obj.name == response.dept) {
+                    return obj;
+                }
+            });
+    
+            deptID = deptID[0].id;
+    
+            // console.log(`deptID is ${deptID}`);
+
+            // create a query to get all employees in the specified department
+            let budgetQuery = `SELECT r.salary
+            FROM
+                employee e
+            LEFT JOIN roles r ON
+	            e.role_id = r.id
+            LEFT JOIN department d ON
+                r.department_id = d.id WHERE r.department_id = ${deptID};`;
+            
+            connection.query(budgetQuery, function(err, budgetRes) {
+                if (err) throw err;
+            
+                // add up total of all salaries in department
+                let totalBudget = 0;
+
+                budgetRes.forEach(element => {
+                    totalBudget += element.salary;
+                });
+                
+                console.log(`The total salary budget for the ${response.dept} department is $${totalBudget}`);
+
+                repeat();
+            });
+        });
+    });
+}
+
 // main switch logic, takes the user's selected menu option and calls the appropriate function
 function mainLoop(response) {
-    console.log("Entering mainLoop with response: " + response);
+    
     switch(response) {
         case "View All Employees":
             printEmployeeInfo();
@@ -399,17 +452,21 @@ function mainLoop(response) {
         case "Update Employee Role":
             updateEmployeeRole();
             break;
+        case "View Department Budget":
+            viewDeptBudget();
+            break;
         case "Exit":
             console.log("Exiting...");
             connection.end();
             break;
         default:
-            console.log("Default case");
+            connection.end();
             break;
     }
     
 }
 
+// asks the user what they want to do next
 function repeat(){
     inquirer.prompt({
         type: "list",
@@ -422,10 +479,10 @@ function repeat(){
             "View All Roles",
             "View All Departments",
             "Update Employee Role",
+            "View Department Budget",
             "Exit"],
         name: "answer"        
     }).then(function(response) {
-        console.log(response.answer);
         mainLoop(response.answer);
     });
 }

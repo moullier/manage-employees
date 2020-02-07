@@ -10,6 +10,7 @@ The functionality included at this time is:
 * Add new Employee, Role or Department
 * View All Employees, Roles or Deparments
 * Update Employee Role
+* Calculate Budget for a Department
 
 ## Technologies Used
 The application is created in Node.  It uses the Node package inquirer to collect user input.  The Node package mysql is used to send queries to/receive responses from the mySQL database.
